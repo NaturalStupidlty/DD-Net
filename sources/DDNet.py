@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from tensorflow import Tensor
 from keras.models import Model
 from keras.optimizers.legacy import Adam
 from keras.src.callbacks import ReduceLROnPlateau
@@ -7,11 +8,40 @@ from keras.metrics import Precision, Recall, AUC
 from keras.layers import Conv1D, BatchNormalization, LeakyReLU, Dropout, Dense, Input, SpatialDropout1D, \
     MaxPooling1D, GlobalMaxPooling1D, concatenate
 
-from sources.utils import pose_motion
+
+from sources.utils import Config, pose_motion
 
 
 class DDNet:
-    def __init__(self, model_config, verbose: bool = True):
+    """
+    Implementation of DD-Net model.
+
+    Attributes:
+        model: (Model) - The built Keras model.
+        model_config: (Config) - Configuration settings for the model.
+
+    Methods:
+        dense1D(x, filters)
+        convolution1D(x, filters, kernel)
+        convolutions_block(x, filters)
+        build_model_block(x, filters, max_pooling)
+        build_jcd_block(x, filters)
+        build_slow_motion_block(x, filters)
+        build_fast_motion_block(x, filters)
+        build_main_block(x, filters)
+        build_output_block(x, classes_number)
+        build_model()
+        train(x_train, y_train, x_valid, y_valid, learning_rate, epochs)
+        predict(data, verbose)
+        save(save_path)
+    """
+    def __init__(self, model_config: Config, verbose: bool = True):
+        """
+        Builds the model.
+
+        :param model_config: (Config) - Configuration settings for the model.
+        :param verbose: (bool) - If True, print model summary after building.
+        """
         self.model = None
         self.model_config = model_config
         self.build_model()
@@ -20,7 +50,14 @@ class DDNet:
             print(self.model.summary())
 
     @staticmethod
-    def dense1D(x, filters):
+    def dense1D(x: Tensor, filters: int):
+        """
+        Apply a 1D dense layer with batch normalization and LeakyReLU activation.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (units) in the dense layer.
+        :return: (Tensor) - Output tensor after applying dense layer.
+        """
         x = Dense(filters, use_bias=False)(x)
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.2)(x)
@@ -28,6 +65,14 @@ class DDNet:
 
     @staticmethod
     def convolution1D(x, filters, kernel):
+        """
+        Apply a 1D convolutional layer with batch normalization and LeakyReLU activation.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) in the convolutional layer.
+        :param kernel: (int) - Size of the convolutional kernel.
+        :return: (Tensor) - Output tensor after applying convolutional layer.
+        """
         x = Conv1D(filters, kernel_size=kernel, padding='same', use_bias=False)(x)
         x = BatchNormalization()(x)
         x = LeakyReLU(alpha=0.2)(x)
@@ -35,12 +80,27 @@ class DDNet:
 
     @staticmethod
     def convolutions_block(x, filters):
+        """
+        Apply a block of two consecutive 1D convolutional layers with batch normalization and LeakyReLU activation.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) for each convolutional layer.
+        :return: (Tensor) - Output tensor after applying the convolutions block.
+        """
         x = DDNet.convolution1D(x, filters, 3)
         x = DDNet.convolution1D(x, filters, 3)
         return x
 
     @staticmethod
     def build_model_block(x, filters, max_pooling: bool):
+        """
+        Build a model block consisting of multiple layers including convolutions and optional max pooling.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) for convolutional layers.
+        :param max_pooling: (bool) - Whether to apply max pooling after certain convolutions.
+        :return: (Tensor) - Output tensor after applying the model block.
+        """
         x = DDNet.convolution1D(x, filters * 2, 1)
         x = SpatialDropout1D(0.1)(x)
 
@@ -55,21 +115,49 @@ class DDNet:
 
     @staticmethod
     def build_jcd_block(x, filters):
+        """
+        Build a block specific for Joint Collection Distances (JCD) processing.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) for convolutional layers.
+        :return: (Tensor) - Output tensor after applying the JCD block.
+        """
         x = DDNet.build_model_block(x, filters, max_pooling=True)
         return x
 
     @staticmethod
     def build_slow_motion_block(x, filters):
+        """
+        Build a block for processing slow motion data.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) for convolutional layers.
+        :return: (Tensor) - Output tensor after applying the slow motion block.
+        """
         x = DDNet.build_model_block(x, filters, max_pooling=True)
         return x
 
     @staticmethod
     def build_fast_motion_block(x, filters):
+        """
+        Build a block for processing fast motion data.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) for convolutional layers.
+        :return: (Tensor) - Output tensor after applying the fast motion block.
+        """
         x = DDNet.build_model_block(x, filters, max_pooling=False)
         return x
 
     @staticmethod
     def build_main_block(x, filters):
+        """
+        Build the main block of the model, consisting of multiple convolutional layers with max pooling.
+
+        :param x: (Tensor) - Input tensor.
+        :param filters: (int) - Number of filters (output channels) for convolutional layers.
+        :return: (Tensor) - Output tensor after applying the main block.
+        """
         x = DDNet.convolutions_block(x, filters * 2)
         x = MaxPooling1D(2)(x)
         x = SpatialDropout1D(0.1)(x)
@@ -84,6 +172,13 @@ class DDNet:
 
     @staticmethod
     def build_output_block(x, classes_number):
+        """
+        Build the output block of the model.
+
+        :param x: (Tensor) - Input tensor.
+        :param classes_number: (int) - Number of classes for classification.
+        :return: (Tensor) - Output tensor after applying the output block.
+        """
         x = GlobalMaxPooling1D()(x)
         x = DDNet.dense1D(x, 128)
         x = Dropout(0.5)(x)
@@ -94,6 +189,9 @@ class DDNet:
         return x
 
     def build_model(self):
+        """
+        Build the DDNet model architecture from the configurations.
+        """
         Distance = Input(name='Distance', shape=(self.model_config.frame_length, self.model_config.features_dimension))
         Motion = Input(name='Motion',
                        shape=(self.model_config.frame_length,
@@ -115,7 +213,19 @@ class DDNet:
 
         self.model = Model(inputs=[Distance, Motion], outputs=model)
 
-    def train(self, x_train, y_train, x_valid, y_valid, learning_rate=1e-3, epochs=100):
+    def train(self, x_train: np.ndarray, y_train: np.ndarray, x_valid: np.ndarray, y_valid: np.ndarray,
+              learning_rate: float = 1e-3, epochs: int = 100):
+        """
+        Train the DDNet model on the provided data.
+
+        :param x_train: (numpy.ndarray) - Training input data.
+        :param y_train: (numpy.ndarray) - Training labels.
+        :param x_valid: (numpy.ndarray) - Validation input data.
+        :param y_valid: (numpy.ndarray) - Validation labels.
+        :param learning_rate: (float) - Learning rate for the optimizer.
+        :param epochs: (int) - Number of training epochs.
+        :return: (History) - Training history.
+        """
         precision = Precision(name='precision')
         recall = Recall(name='recall')
         roc_auc = AUC(multi_label=True)
@@ -147,6 +257,13 @@ class DDNet:
         return history
 
     def predict(self, data: list[np.ndarray], verbose: bool = True):
+        """
+        Make predictions using the trained model.
+
+        :param data: (list[numpy.ndarray]) - List of input data arrays for prediction.
+        :param verbose: (bool) - If True, print prediction time.
+        :return: (numpy.ndarray) - Predicted labels.
+        """
         start_time = time.time()
         predictions = self.model.predict(data)
         end_time = time.time() - start_time
@@ -157,4 +274,9 @@ class DDNet:
         return predictions
 
     def save(self, save_path: str):
+        """
+        Save the model weights to the specified path.
+
+        :param save_path: (str) - Path to save the model weights.
+        """
         self.model.save_weights(save_path)
