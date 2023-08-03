@@ -6,7 +6,7 @@ from scipy.signal import medfilt
 from sources.utils import Config
 
 
-def load_gesture_files(file_path: str):
+def load_gesture_files(file_path: str) -> np.ndarray:
     """
     Load gesture files from a given path.
 
@@ -16,7 +16,7 @@ def load_gesture_files(file_path: str):
     return np.loadtxt(file_path).astype('int16')
 
 
-def load_skeleton_data(skeleton_path: str):
+def load_skeleton_data(skeleton_path: str) -> np.ndarray:
     """
     Load skeleton data from a given path and apply median filtering.
 
@@ -29,7 +29,7 @@ def load_skeleton_data(skeleton_path: str):
     return skeleton
 
 
-def create_dataset(gestures: np.ndarray, config: Config):
+def create_dataset(gestures: np.ndarray, config: Config) -> dict:
     """
     Create a dataset from the provided gesture information.
 
@@ -54,7 +54,7 @@ def create_dataset(gestures: np.ndarray, config: Config):
     return dataset
 
 
-def save_dataset(dataset: dict, file_path: str):
+def save_dataset(dataset: dict, file_path: str) -> None:
     """
     Save a dataset to a file using pickle.
 
@@ -65,7 +65,7 @@ def save_dataset(dataset: dict, file_path: str):
         pickle.dump(dataset, f)
 
 
-def main():
+def main() -> None:
     """
     Main function to process and save datasets.
     """
