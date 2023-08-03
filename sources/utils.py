@@ -1,4 +1,3 @@
-import random
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -10,67 +9,72 @@ from scipy.spatial.distance import cdist
 from sklearn.metrics import confusion_matrix
 
 
-# Rescale to be 64 frames
-def zoom(p, target_l=64, joints_num=25, joints_dim=3):
-    l = p.shape[0]
-    p_new = np.empty([target_l, joints_num, joints_dim])
-    for m in range(joints_num):
-        for n in range(joints_dim):
-            p[:, m, n] = medfilt(p[:, m, n], 3)
-            p_new[:, m, n] = inter.zoom(p[:, m, n], target_l/l)[:target_l]
-    return p_new
+class Config:
+    def __init__(self):
+        self.frame_length = 32
+        self.joints_number = 22
+        self.joints_dimension = 3
+        self.classes_number = 14
+        self.features_dimension = 231
+        self.filters = 16
+        self.data_directory = '../data/SHREC/'
 
 
-def sampling_frame(p, C):
-    full_l = p.shape[0] # full length
-    if random.uniform(0, 1) < 0.5: # aligment sampling
-        valid_l = np.round(np.random.uniform(0.9,1)*full_l)
-        s = random.randint(0, full_l-int(valid_l))
-        e = s+valid_l # sample end point
-        p = p[int(s):int(e), :, :]
-    else: # without aligment sampling
-        valid_l = np.round(np.random.uniform(0.9, 1) * full_l)
-        index = np.sort(np.random.choice(range(0, full_l), int(valid_l), replace=False))
-        p = p[index, :, :]
-    p = zoom(p, C.frame_l, C.joint_n, C.joint_d)
-    return p
+def zoom_frames(frames, new_frame_length=64, new_joints_number=25, new_joints_dimension=3):
+    frame_length = frames.shape[0]
+    zoomed_frames = np.empty([new_frame_length, new_joints_number, new_joints_dimension])
+    for j in range(new_joints_number):
+        for d in range(new_joints_dimension):
+            frames[:, j, d] = medfilt(frames[:, j, d], 3)
+            zoomed_frames[:, j, d] = inter.zoom(frames[:, j, d], new_frame_length / frame_length)[:new_frame_length]
+    return zoomed_frames
 
 
-def get_CG(p, C):
-    M = []
-    iu = np.triu_indices(C.joint_n, 1, C.joint_n)
-    for f in range(C.frame_l):
-        #distance max 
-        d_m = cdist(p[f], np.concatenate([p[f], np.zeros([1, C.joint_d])]), 'euclidean')
-        d_m = d_m[iu] 
-        M.append(d_m)
-    M = np.stack(M)   
-    return M
+def get_joint_collection_distances(frames, config):
+    pairwise_distances_list = []
+    upper_triangle_indices = np.triu_indices(config.joints_number, k=1)
+
+    for frame in range(config.frame_length):
+        # Calculate pairwise Euclidean distances for the current frame
+        current_frame_points = frames[frame]
+        distances_matrix = cdist(current_frame_points,
+                                 np.concatenate([current_frame_points, np.zeros([1, config.joints_dimension])]),
+                                 'euclidean')
+        pairwise_distances = distances_matrix[upper_triangle_indices]
+
+        # Append the pairwise distances to the list
+        pairwise_distances_list.append(pairwise_distances)
+
+    # Convert the list of pairwise distances into a 3D NumPy array
+    jcd_matrix = np.stack(pairwise_distances_list)
+
+    return jcd_matrix
 
 
-def normlize_range(p):
-    # normolize to start point, use the center for hand case
-    p[:, :, 0] = p[:, :, 0]-np.mean(p[:, :, 0])
-    p[:, :, 1] = p[:, :, 1]-np.mean(p[:, :, 1])
-    p[:, :, 2] = p[:, :, 2]-np.mean(p[:, :, 2])
-    return p
+def normalize_range(frames):
+    # Normalize to start point
+    frames[:, :, 0] = frames[:, :, 0] - np.mean(frames[:, :, 0])
+    frames[:, :, 1] = frames[:, :, 1] - np.mean(frames[:, :, 1])
+    frames[:, :, 2] = frames[:, :, 2] - np.mean(frames[:, :, 2])
+
+    return frames
 
 
-def cm_analysis(y_true, y_pred, filename, labels, ymap=None, figsize=(8, 8)):
+def cm_analysis(y_true, y_pred, filename, labels, ymap=None, figure_size=(8, 8)):
     """
     Generate matrix plot of confusion matrix with pretty annotations.
     The plot image is saved to disk.
     args: 
-      y_true:    true label of the data, with shape (nsamples,)
-      y_pred:    prediction of the data, with shape (nsamples,)
+      y_true:    true label of the data, with shape (samples_number,)
+      y_pred:    prediction of the data, with shape (samples_number,)
       filename:  filename of figure file to save
       labels:    string array, name the order of class labels in the confusion matrix.
                  use `clf.classes_` if using scikit-learn models.
-                 with shape (nclass,).
-      ymap:      dict: any -> string, length == nclass.
+                 with shape (classes_number,).
+      ymap:      dict: any -> string, length == classes_number.
                  if not None, map the labels & ys to more understandable strings.
                  Caution: original y_true, y_pred and labels must align.
-      figsize:   the size of the figure plotted.
+      figure_size:   the size of the figure plotted.
     """
     if ymap is not None:
         y_pred = [ymap[yi] for yi in y_pred]
@@ -87,16 +91,16 @@ def cm_analysis(y_true, y_pred, filename, labels, ymap=None, figsize=(8, 8)):
             p = cm_perc[i, j]
             if i == j:
                 s = cm_sum[i]
-                #annot[i, j] = '%.1f%%\n%d/%d' % (p, c, s)
+                #annot[i, j] = '%.1f%%\n%d/%d' % (frames, c, s)
                 annot[i, j] = '%.1f' % (p)
             elif c == 0:
                 annot[i, j] = ''
             else:
-                #annot[i, j] = '%.1f%%\n%d' % (p, c)
+                #annot[i, j] = '%.1f%%\n%d' % (frames, c)
                 annot[i, j] = '%.1f' % (p)
     cm = pd.DataFrame(cm, index=labels, columns=labels)
     cm.index.name = 'Actual'
     cm.columns.name = 'Predicted'
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, ax = plt.subplots(figsize=figure_size)
     sns.heatmap(cm, annot=annot, fmt='', ax=ax, cbar=False, cmap="YlGnBu")
     plt.savefig(filename)
