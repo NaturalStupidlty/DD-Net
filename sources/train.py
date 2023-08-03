@@ -40,6 +40,24 @@ def prepare_data(config, filename: str):
     return [Distances, Motion], Labels
 
 
+def plot_history(history):
+    """
+    Plot training & validation metrics
+
+    :param history:
+    :return:
+    """
+    plt.plot(history.history['accuracy'], color='blue')
+    plt.plot(history.history['val_accuracy'], color='orange')
+    plt.plot(history.history['auc'], color='green')  # Assuming AUC is named 'auc' in training_history
+
+    plt.title('Model Metrics')
+    plt.ylabel('Metrics')
+    plt.xlabel('Epoch')
+    plt.legend(['Train Accuracy', 'Validation Accuracy', 'ROC AUC'], loc='upper left')
+    plt.show()
+
+
 def main():
     random.seed(69)
 
@@ -52,18 +70,11 @@ def main():
     X_train, Y_train = prepare_data(config, "train.pkl")
     X_valid, Y_valid = prepare_data(config, "valid.pkl")
 
-    training_history = DD_Net.train(X_train, Y_train, X_valid, Y_valid, learning_rate=1e-3, epochs=300)
+    history = DD_Net.train(X_train, Y_train, X_valid, Y_valid, learning_rate=1e-3, epochs=30)
 
     DD_Net.save('../models/ddnet.h5')
 
-    # Plot training & validation accuracy values
-    plt.plot(training_history.history['accuracy'])
-    plt.plot(training_history.history['val_accuracy'])
-    plt.title('Model accuracy')
-    plt.ylabel('Accuracy')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Validation'], loc='upper left')
-    plt.show()
+    plot_history(history)
 
     Y_pred = DD_Net.predict(X_valid)
 
