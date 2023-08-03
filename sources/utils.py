@@ -4,7 +4,9 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.ndimage.interpolation as inter
 
+
 from tqdm import tqdm
+from tensorflow import Tensor
 from scipy.signal import medfilt
 from scipy.spatial.distance import cdist
 from sklearn.metrics import confusion_matrix
@@ -22,15 +24,29 @@ class Config:
         self.data_directory = '../data/SHREC/'
 
 
-def poses_difference(frame):
+def poses_difference(frame: Tensor) -> Tensor:
+    """
+    Calculate the difference between consecutive frames' joint positions.
+
+    :param frame: (Tensor) - Input tensor of shape (batch_size, frame_length, joints_number, joints_dimension).
+
+    :return: (Tensor) - Difference tensor of the same shape as the input frame.
+    """
     height, width = frame.get_shape()[1], frame.get_shape()[2]
     frame = tf.subtract(frame[:, 1:, ...], frame[:, :-1, ...])
     frame = tf.image.resize(frame, size=[height, width])
-
     return frame
 
 
-def pose_motion(frames, frame_length):
+def pose_motion(frames: Tensor, frame_length: int) -> (Tensor, Tensor):
+    """
+    Extract slow and fast motion differences from input frames.
+
+    :param frames: (Tensor) - Input tensor of shape (batch_size, frame_length, joints_number, joints_dimension).
+    :param frame_length: (int) - Number of frames in each sequence.
+
+    :return: (Tensor, Tensor) - Tuple containing two tensors: slow motion differences (frame_length, features) and fast motion differences (frame_length/2, features).
+    """
     difference_slow = Lambda(lambda x: poses_difference(x))(frames)
     difference_slow = Reshape((frame_length, -1))(difference_slow)
 
@@ -41,7 +57,18 @@ def pose_motion(frames, frame_length):
     return difference_slow, difference_fast
 
 
-def zoom_frames(frames, new_frame_length=64, new_joints_number=22, new_joints_dimension=2):
+def zoom_frames(frames: np.ndarray, new_frame_length: int = 64, new_joints_number: int = 22,
+                new_joints_dimension: int = 2) -> np.ndarray:
+    """
+    Resize input frames to a new frame length while preserving joint positions.
+
+    :param frames: (numpy.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
+    :param new_frame_length: (int) - New desired frame length.
+    :param new_joints_number: (int) - New desired number of joints.
+    :param new_joints_dimension: (int) - New desired dimension of joints.
+
+    :return: (numpy.ndarray) - Zoomed frames of shape (new_frame_length, new_joints_number, new_joints_dimension).
+    """
     frame_length = frames.shape[0]
     zoomed_frames = np.empty([new_frame_length, new_joints_number, new_joints_dimension])
     for j in range(new_joints_number):
@@ -51,51 +78,53 @@ def zoom_frames(frames, new_frame_length=64, new_joints_number=22, new_joints_di
     return zoomed_frames
 
 
-def get_joint_collection_distances(frames, config):
+def get_joint_collection_distances(frames, config) -> np.ndarray:
     """
-    Calculates triangular matrix of pairwise Euclidian distances between joints
+    Calculate pairwise Euclidean distances between joints for each frame.
 
-    :param frames:
-    :param config:
-    :return:
+    :param frames: (numpy.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
+    :param config: (Config) - Configuration object containing parameters.
+
+    :return: (numpy.ndarray) - Triangular matrix of pairwise distances of shape (frame_length, joints_number*(joints_number-1)/2).
     """
-
     pairwise_distances_list = []
     upper_triangle_indices = np.triu_indices(config.joints_number, k=1)
 
     for frame in range(config.frame_length):
-        # Calculate pairwise Euclidean distances for the current frame
         current_frame_points = frames[frame]
         distances_matrix = cdist(current_frame_points,
                                  np.concatenate([current_frame_points, np.zeros([1, config.joints_dimension])]),
                                  'euclidean')
         pairwise_distances = distances_matrix[upper_triangle_indices]
-
-        # Append the pairwise distances to the list
         pairwise_distances_list.append(pairwise_distances)
 
-    # Convert the list of pairwise distances into a 3D NumPy array
     jcd_matrix = np.stack(pairwise_distances_list)
-
     return jcd_matrix
 
 
-def normalize_range(frames):
+def normalize_range(frames) -> np.ndarray:
     """
-    Normalizes frames to start point
+    Normalize joint positions within frames to start from the mean.
 
-    :param frames:
-    :return:
+    :param frames: (numpy.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
+
+    :return: (numpy.ndarray) - Normalized frames with joint positions starting from the mean, same shape as input frames.
     """
     frames[:, :, 0] = frames[:, :, 0] - np.mean(frames[:, :, 0])
     frames[:, :, 1] = frames[:, :, 1] - np.mean(frames[:, :, 1])
-
     return frames
 
 
-def prepare_data(config, filename: str):
-    data = pickle.load(open(config.data_directory + filename, "rb"))
+def prepare_data(config, filename: str) -> (list, np.ndarray):
+    """
+    Prepare data from a given file.
 
+    :param config: (Config) - Configuration object containing parameters.
+    :param filename: (str) - Name of the data file.
+
+    :return: (list, numpy.ndarray) - List containing distance and motion data, and ndarray containing labels.
+    """
+    data = pickle.load(open(config.data_directory + filename, "rb"))
     Labels = []
     Distances = []
     Motion = []
@@ -123,16 +152,15 @@ def prepare_data(config, filename: str):
     return [Distances, Motion], Labels
 
 
-def plot_history(history):
+def plot_history(history) -> None:
     """
-    Plot training & validation metrics
+    Plot training & validation metrics.
 
-    :param history:
-    :return:
+    :param history: (History) - Training history returned by the model's fit method.
     """
     plt.plot(history.history['accuracy'], color='blue')
     plt.plot(history.history['val_accuracy'], color='orange')
-    plt.plot(history.history['auc'], color='green')  # Assuming AUC is named 'auc' in training_history
+    plt.plot(history.history['auc'], color='green')
 
     plt.title('Model Metrics')
     plt.ylabel('Metrics')
@@ -141,8 +169,13 @@ def plot_history(history):
     plt.show()
 
 
-def plot_confusion_matrix(predictions, labels):
+def plot_confusion_matrix(predictions, labels) -> None:
+    """
+    Plot the confusion matrix based on predicted and true labels.
+
+    :param predictions: (ndarray) - Predicted labels.
+    :param labels: (ndarray) - True labels.
+    """
     matrix = confusion_matrix(np.argmax(labels, axis=1), np.argmax(predictions, axis=1))
     plt.figure(figsize=(10, 10))
     plt.imshow(matrix)
-    plt.show()
