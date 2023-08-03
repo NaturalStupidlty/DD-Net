@@ -1,9 +1,13 @@
+import pickle
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import scipy.ndimage.interpolation as inter
 
+from tqdm import tqdm
 from scipy.signal import medfilt
 from scipy.spatial.distance import cdist
+from sklearn.metrics import confusion_matrix
 from keras.src.layers import Lambda, Reshape
 
 
@@ -87,3 +91,58 @@ def normalize_range(frames):
     frames[:, :, 1] = frames[:, :, 1] - np.mean(frames[:, :, 1])
 
     return frames
+
+
+def prepare_data(config, filename: str):
+    data = pickle.load(open(config.data_directory + filename, "rb"))
+
+    Labels = []
+    Distances = []
+    Motion = []
+
+    print(f"Preparing data from {filename}...")
+
+    for i in tqdm(range(len(data['skeleton']))):
+        motion = np.copy(data['skeleton'][i]).reshape([-1, config.joints_number, config.joints_dimension])
+        motion = zoom_frames(motion, config.frame_length, config.joints_number, config.joints_dimension)
+        motion = normalize_range(motion)
+
+        label = np.zeros(config.classes_number)
+        label[data['label'][i] - 1] = 1
+
+        distance = get_joint_collection_distances(motion, config)
+
+        Distances.append(distance)
+        Motion.append(motion)
+        Labels.append(label)
+
+    Distances = np.stack(Distances)
+    Motion = np.stack(Motion)
+    Labels = np.stack(Labels)
+
+    return [Distances, Motion], Labels
+
+
+def plot_history(history):
+    """
+    Plot training & validation metrics
+
+    :param history:
+    :return:
+    """
+    plt.plot(history.history['accuracy'], color='blue')
+    plt.plot(history.history['val_accuracy'], color='orange')
+    plt.plot(history.history['auc'], color='green')  # Assuming AUC is named 'auc' in training_history
+
+    plt.title('Model Metrics')
+    plt.ylabel('Metrics')
+    plt.xlabel('Epoch')
+    plt.legend(['Train Accuracy', 'Validation Accuracy', 'ROC AUC'], loc='upper left')
+    plt.show()
+
+
+def plot_confusion_matrix(predictions, labels):
+    matrix = confusion_matrix(np.argmax(labels, axis=1), np.argmax(predictions, axis=1))
+    plt.figure(figsize=(10, 10))
+    plt.imshow(matrix)
+    plt.show()
