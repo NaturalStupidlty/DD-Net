@@ -11,7 +11,7 @@ class Config:
     def __init__(self):
         self.frame_length = 32
         self.joints_number = 22
-        self.joints_dimension = 3
+        self.joints_dimension = 2
         self.features_dimension = 231
         self.classes_number = 14
         self.filters = 16
@@ -19,9 +19,9 @@ class Config:
 
 
 def poses_difference(frame):
-    H, W = frame.get_shape()[1], frame.get_shape()[2]
+    height, width = frame.get_shape()[1], frame.get_shape()[2]
     frame = tf.subtract(frame[:, 1:, ...], frame[:, :-1, ...])
-    frame = tf.image.resize(frame, size=[H, W])
+    frame = tf.image.resize(frame, size=[height, width])
 
     return frame
 
@@ -37,7 +37,7 @@ def pose_motion(frames, frame_length):
     return difference_slow, difference_fast
 
 
-def zoom_frames(frames, new_frame_length=64, new_joints_number=25, new_joints_dimension=3):
+def zoom_frames(frames, new_frame_length=64, new_joints_number=22, new_joints_dimension=2):
     frame_length = frames.shape[0]
     zoomed_frames = np.empty([new_frame_length, new_joints_number, new_joints_dimension])
     for j in range(new_joints_number):
@@ -48,6 +48,14 @@ def zoom_frames(frames, new_frame_length=64, new_joints_number=25, new_joints_di
 
 
 def get_joint_collection_distances(frames, config):
+    """
+    Calculates triangular matrix of pairwise Euclidian distances between joints
+
+    :param frames:
+    :param config:
+    :return:
+    """
+
     pairwise_distances_list = []
     upper_triangle_indices = np.triu_indices(config.joints_number, k=1)
 
@@ -69,9 +77,13 @@ def get_joint_collection_distances(frames, config):
 
 
 def normalize_range(frames):
-    # Normalize to start point
+    """
+    Normalizes frames to start point
+
+    :param frames:
+    :return:
+    """
     frames[:, :, 0] = frames[:, :, 0] - np.mean(frames[:, :, 0])
     frames[:, :, 1] = frames[:, :, 1] - np.mean(frames[:, :, 1])
-    frames[:, :, 2] = frames[:, :, 2] - np.mean(frames[:, :, 2])
 
     return frames
