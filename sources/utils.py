@@ -1,12 +1,8 @@
 import numpy as np
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 import scipy.ndimage.interpolation as inter
 
 from scipy.signal import medfilt
 from scipy.spatial.distance import cdist
-from sklearn.metrics import confusion_matrix
 
 
 class Config:
