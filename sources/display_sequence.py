@@ -20,8 +20,8 @@ def extract_joint_points(skeletons_image, bones):
 
         for idx_bones in range(num_joints):
             joint1, joint2 = bones[idx_bones]
-            pt1 = ske[joint1 * 2 : joint1 * 2 + 2]
-            pt2 = ske[joint2 * 2 : joint2 * 2 + 2]
+            pt1 = ske[joint1 * 2: joint1 * 2 + 2]
+            pt2 = ske[joint2 * 2: joint2 * 2 + 2]
             x[0, idx_bones], x[1, idx_bones] = pt1[0], pt2[0]
             y[0, idx_bones], y[1, idx_bones] = pt1[1], pt2[1]
 
@@ -35,24 +35,25 @@ def main():
     root_directory = '../data/SHREC/'
     idx_gesture, idx_subject, idx_finger, idx_essai = 1, 1, 1, 1
 
-    # Idx of the bones in the hand skeleton to display it.
-    bones = np.array([[0, 1], [0, 2], [2, 3], [3, 4], [4, 5], [1, 6], [6, 7], [7, 8], [8, 9], [1, 10], [10, 11],
-                      [11, 12], [12, 13], [1, 14], [14, 15], [15, 16], [16, 17], [1, 18], [18, 19], [19, 20], [20, 21]])
+    bones = np.array([[0, 1], [0, 2], [2, 3], [3, 4], [4, 5], [1, 6], [6, 7], [7, 8],
+                      [8, 9], [1, 10], [10, 11], [11, 12], [12, 13], [1, 14], [14, 15],
+                      [15, 16], [16, 17], [1, 18], [18, 19], [19, 20], [20, 21]])
 
-    # Path of the gesture
     path_gesture = os.path.join(root_directory,
                                 f'gesture_{idx_gesture}/finger_{idx_finger}/subject_{idx_subject}/essai_{idx_essai}/')
 
     if os.path.isdir(path_gesture):
         path_skeletons_image = os.path.join(path_gesture, 'skeletons_image.txt')
         skeletons_image = load_skeletons_image(path_skeletons_image)
-        pngDepthFiles = np.array([imageio.imread(os.path.join(path_gesture, f'{id_image}_depth.png')) for id_image in range(skeletons_image.shape[0])])
+        pngDepthFiles = np.array([imageio.imread(os.path.join(path_gesture, f'{id_image}_depth.png'))
+                                  for id_image in range(skeletons_image.shape[0])])
         skeletons_display = extract_joint_points(skeletons_image, bones)
 
         for id_image in range(skeletons_image.shape[0]):
             plt.clf()
             plt.imshow(pngDepthFiles[id_image, :])
-            plt.plot(skeletons_display[id_image, 0, :, :], skeletons_display[id_image, 1, :, :], linewidth=2.5)
+            plt.plot(skeletons_display[id_image, 0, :, :], skeletons_display[id_image, 1, :, :],
+                     linewidth=2.5)
             plt.pause(0.01)
     else:
         print(f'There is no gesture in the path {path_gesture}')
