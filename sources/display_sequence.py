@@ -4,11 +4,24 @@ import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 
 
-def load_skeletons_image(path):
+def load_skeletons_image(path: str) -> np.ndarray:
+    """
+    Load skeletons image from a text file.
+
+    :param path: (str) - The path to the skeletons image text file.
+    :return: (numpy.ndarray) - A numpy array containing the loaded skeletons image.
+    """
     return np.loadtxt(path)
 
 
-def extract_joint_points(skeletons_image, bones):
+def extract_joint_points(skeletons_image: np.ndarray, bones: np.ndarray) -> np.ndarray:
+    """
+    Extract joint points from skeletons image and create display data.
+
+    :param skeletons_image: (numpy.ndarray) - Input skeletons image data.
+    :param bones: (numpy.ndarray) - An array representing the bone connections.
+    :return: (numpy.ndarray) - A numpy array containing extracted joint points for display.
+    """
     num_images = skeletons_image.shape[0]
     num_joints = bones.shape[0]
     skeletons_display = np.zeros((num_images, 2, 2, num_joints))
@@ -31,7 +44,10 @@ def extract_joint_points(skeletons_image, bones):
     return skeletons_display
 
 
-def main():
+def main() -> None:
+    """
+    Main function to visualize extracted joint points on depth images.
+    """
     root_directory = '../data/SHREC/'
     idx_gesture, idx_subject, idx_finger, idx_essai = 1, 1, 1, 1
 
