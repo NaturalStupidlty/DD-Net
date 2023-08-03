@@ -3,11 +3,10 @@ import numpy as np
 from tensorflow import Tensor
 from keras.models import Model
 from keras.optimizers.legacy import Adam
-from keras.src.callbacks import ReduceLROnPlateau
+from keras.src.callbacks import ReduceLROnPlateau, History
 from keras.metrics import Precision, Recall, AUC
 from keras.layers import Conv1D, BatchNormalization, LeakyReLU, Dropout, Dense, Input, SpatialDropout1D, \
     MaxPooling1D, GlobalMaxPooling1D, concatenate
-
 
 from sources.utils import Config, pose_motion
 
@@ -35,7 +34,7 @@ class DDNet:
         predict(data, verbose)
         save(save_path)
     """
-    def __init__(self, model_config: Config, verbose: bool = True):
+    def __init__(self, model_config: Config, verbose: bool = True) -> None:
         """
         Builds the model.
 
@@ -50,7 +49,7 @@ class DDNet:
             print(self.model.summary())
 
     @staticmethod
-    def dense1D(x: Tensor, filters: int):
+    def dense1D(x: Tensor, filters: int) -> Tensor:
         """
         Apply a 1D dense layer with batch normalization and LeakyReLU activation.
 
@@ -64,7 +63,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def convolution1D(x, filters, kernel):
+    def convolution1D(x, filters, kernel) -> Tensor:
         """
         Apply a 1D convolutional layer with batch normalization and LeakyReLU activation.
 
@@ -79,7 +78,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def convolutions_block(x, filters):
+    def convolutions_block(x, filters) -> Tensor:
         """
         Apply a block of two consecutive 1D convolutional layers with batch normalization and LeakyReLU activation.
 
@@ -92,7 +91,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_model_block(x, filters, max_pooling: bool):
+    def build_model_block(x, filters, max_pooling: bool) -> Tensor:
         """
         Build a model block consisting of multiple layers including convolutions and optional max pooling.
 
@@ -114,7 +113,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_jcd_block(x, filters):
+    def build_jcd_block(x, filters) -> Tensor:
         """
         Build a block specific for Joint Collection Distances (JCD) processing.
 
@@ -126,7 +125,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_slow_motion_block(x, filters):
+    def build_slow_motion_block(x, filters) -> Tensor:
         """
         Build a block for processing slow motion data.
 
@@ -138,7 +137,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_fast_motion_block(x, filters):
+    def build_fast_motion_block(x, filters) -> Tensor:
         """
         Build a block for processing fast motion data.
 
@@ -150,7 +149,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_main_block(x, filters):
+    def build_main_block(x, filters) -> Tensor:
         """
         Build the main block of the model, consisting of multiple convolutional layers with max pooling.
 
@@ -171,7 +170,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_output_block(x, classes_number):
+    def build_output_block(x, classes_number) -> Tensor:
         """
         Build the output block of the model.
 
@@ -188,7 +187,7 @@ class DDNet:
         x = Dense(classes_number, activation='softmax')(x)
         return x
 
-    def build_model(self):
+    def build_model(self) -> None:
         """
         Build the DDNet model architecture from the configurations.
         """
@@ -214,7 +213,7 @@ class DDNet:
         self.model = Model(inputs=[Distance, Motion], outputs=model)
 
     def train(self, x_train: np.ndarray, y_train: np.ndarray, x_valid: np.ndarray, y_valid: np.ndarray,
-              learning_rate: float = 1e-3, epochs: int = 100):
+              learning_rate: float = 1e-3, epochs: int = 100) -> History:
         """
         Train the DDNet model on the provided data.
 
