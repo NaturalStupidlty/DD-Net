@@ -1,8 +1,9 @@
 import time
 import numpy as np
 from keras.models import Model
-from keras.src.callbacks import ReduceLROnPlateau
 from keras.optimizers.legacy import Adam
+from keras.src.callbacks import ReduceLROnPlateau
+from keras.metrics import Precision, Recall, AUC
 from keras.layers import Conv1D, BatchNormalization, LeakyReLU, Dropout, Dense, Input, SpatialDropout1D, \
     MaxPooling1D, GlobalMaxPooling1D, concatenate
 
@@ -112,9 +113,15 @@ class DDNet:
         self.model = Model(inputs=[Distance, Motion], outputs=model)
 
     def train(self, x_train, y_train, x_valid, y_valid, learning_rate=1e-3, epochs=100):
+        precision = Precision(name='precision')
+        recall = Recall(name='recall')
+        roc_auc = AUC(multi_label=True)
+
+        metrics_list = ['accuracy', precision, recall, roc_auc]
+
         self.model.compile(loss="categorical_crossentropy",
                            optimizer=Adam(learning_rate),
-                           metrics=['accuracy'])
+                           metrics=metrics_list)
 
         callbacks = []
         lr_scheduler = ReduceLROnPlateau(monitor='loss',
