@@ -11,10 +11,13 @@ from sources.utils import pose_motion
 
 
 class DDNet:
-    def __init__(self, model_config):
+    def __init__(self, model_config, verbose: bool = True):
         self.model = None
         self.model_config = model_config
         self.build_model()
+
+        if verbose and self.model is not None:
+            print(self.model.summary())
 
     @staticmethod
     def dense1D(x, filters):
