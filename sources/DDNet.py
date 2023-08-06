@@ -94,6 +94,7 @@ class DDNet:
     def build_model_block(x, filters, max_pooling: bool) -> Tensor:
         """
         Build a model block consisting of multiple layers including convolutions and optional max pooling.
+        In DD-Net we do not use max pooling to build fast motion block.
 
         :param x: (Tensor) - Input tensor.
         :param filters: (int) - Number of filters (output channels) for convolutional layers.
@@ -190,6 +191,8 @@ class DDNet:
     def build_model(self) -> None:
         """
         Build the DDNet model architecture from the configurations.
+
+        :return: None
         """
         Distance = Input(name='Distance', shape=(self.model_config.frame_length, self.model_config.features_dimension))
         Motion = Input(name='Motion',
@@ -212,15 +215,18 @@ class DDNet:
 
         self.model = Model(inputs=[Distance, Motion], outputs=model)
 
-    def train(self, x_train: np.ndarray, y_train: np.ndarray, x_valid: np.ndarray, y_valid: np.ndarray,
-              learning_rate: float = 1e-3, epochs: int = 100) -> History:
+    def train(self,
+              x_train: np.ndarray, y_train: np.ndarray,
+              x_valid: np.ndarray, y_valid: np.ndarray,
+              learning_rate: float = 1e-3,
+              epochs: int = 100) -> History:
         """
         Train the DDNet model on the provided data.
 
-        :param x_train: (numpy.ndarray) - Training input data.
-        :param y_train: (numpy.ndarray) - Training labels.
-        :param x_valid: (numpy.ndarray) - Validation input data.
-        :param y_valid: (numpy.ndarray) - Validation labels.
+        :param x_train: (np.ndarray) - Training input data.
+        :param y_train: (np.ndarray) - Training labels.
+        :param x_valid: (np.ndarray) - Validation input data.
+        :param y_valid: (np.ndarray) - Validation labels.
         :param learning_rate: (float) - Learning rate for the optimizer.
         :param epochs: (int) - Number of training epochs.
         :return: (History) - Training history.
@@ -259,9 +265,9 @@ class DDNet:
         """
         Make predictions using the trained model.
 
-        :param data: (list[numpy.ndarray]) - List of input data arrays for prediction.
+        :param data: (list[np.ndarray]) - List of input data arrays for prediction.
         :param verbose: (bool) - If True, print prediction time.
-        :return: (numpy.ndarray) - Predicted labels.
+        :return: (np.ndarray) - Predicted labels.
         """
         start_time = time.time()
         predictions = self.model.predict(data)

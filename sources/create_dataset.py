@@ -11,7 +11,7 @@ def load_gesture_files(file_path: str) -> np.ndarray:
     Load gesture files from a given path.
 
     :param file_path: (str) - Path to the gesture files.
-    :return: (numpy.ndarray) - Loaded gesture data as int16.
+    :return: (np.ndarray) - Loaded gesture data as int16.
     """
     return np.loadtxt(file_path).astype('int16')
 
@@ -19,9 +19,10 @@ def load_gesture_files(file_path: str) -> np.ndarray:
 def load_skeleton_data(skeleton_path: str) -> np.ndarray:
     """
     Load skeleton data from a given path and apply median filtering.
+    We need to apply median filtering because the skeleton data is noisy.
 
     :param skeleton_path: (str) - Path to the skeleton data file.
-    :return: (numpy.ndarray) - Loaded and filtered skeleton data as float32.
+    :return: (np.ndarray) - Loaded and filtered skeleton data as float32.
     """
     skeleton = np.loadtxt(skeleton_path).astype('float32')
     for j in range(skeleton.shape[1]):

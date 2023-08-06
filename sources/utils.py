@@ -4,13 +4,13 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.ndimage.interpolation as inter
 
-
 from tqdm import tqdm
 from tensorflow import Tensor
 from scipy.signal import medfilt
 from scipy.spatial.distance import cdist
 from sklearn.metrics import confusion_matrix
 from keras.src.layers import Lambda, Reshape
+from keras.src.callbacks import History
 
 
 class Config:
@@ -57,17 +57,19 @@ def pose_motion(frames: Tensor, frame_length: int) -> (Tensor, Tensor):
     return difference_slow, difference_fast
 
 
-def zoom_frames(frames: np.ndarray, new_frame_length: int = 64, new_joints_number: int = 22,
+def zoom_frames(frames: np.ndarray,
+                new_frame_length: int = 64,
+                new_joints_number: int = 22,
                 new_joints_dimension: int = 2) -> np.ndarray:
     """
     Resize input frames to a new frame length while preserving joint positions.
 
-    :param frames: (numpy.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
+    :param frames: (np.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
     :param new_frame_length: (int) - New desired frame length.
     :param new_joints_number: (int) - New desired number of joints.
     :param new_joints_dimension: (int) - New desired dimension of joints.
 
-    :return: (numpy.ndarray) - Zoomed frames of shape (new_frame_length, new_joints_number, new_joints_dimension).
+    :return: (np.ndarray) - Zoomed frames of shape (new_frame_length, new_joints_number, new_joints_dimension).
     """
     frame_length = frames.shape[0]
     zoomed_frames = np.empty([new_frame_length, new_joints_number, new_joints_dimension])
@@ -78,14 +80,14 @@ def zoom_frames(frames: np.ndarray, new_frame_length: int = 64, new_joints_numbe
     return zoomed_frames
 
 
-def get_joint_collection_distances(frames, config) -> np.ndarray:
+def get_joint_collection_distances(frames: np.ndarray, config: Config) -> np.ndarray:
     """
     Calculate pairwise Euclidean distances between joints for each frame.
 
-    :param frames: (numpy.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
+    :param frames: (np.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
     :param config: (Config) - Configuration object containing parameters.
 
-    :return: (numpy.ndarray) - Triangular matrix of pairwise distances of shape (frame_length, joints_number*(joints_number-1)/2).
+    :return: (np.ndarray) - Triangular matrix of pairwise distances of shape (frame_length, joints_number*(joints_number-1)/2).
     """
     pairwise_distances_list = []
     upper_triangle_indices = np.triu_indices(config.joints_number, k=1)
@@ -102,27 +104,27 @@ def get_joint_collection_distances(frames, config) -> np.ndarray:
     return jcd_matrix
 
 
-def normalize_range(frames) -> np.ndarray:
+def normalize_range(frames: np.ndarray) -> np.ndarray:
     """
     Normalize joint positions within frames to start from the mean.
 
-    :param frames: (numpy.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
+    :param frames: (np.ndarray) - Input frames of shape (frame_length, joints_number, joints_dimension).
 
-    :return: (numpy.ndarray) - Normalized frames with joint positions starting from the mean, same shape as input frames.
+    :return: (np.ndarray) - Normalized frames with joint positions starting from the mean, same shape as input frames.
     """
     frames[:, :, 0] = frames[:, :, 0] - np.mean(frames[:, :, 0])
     frames[:, :, 1] = frames[:, :, 1] - np.mean(frames[:, :, 1])
     return frames
 
 
-def prepare_data(config, filename: str) -> (list, np.ndarray):
+def prepare_data(config: Config, filename: str) -> (list, np.ndarray):
     """
     Prepare data from a given file.
 
     :param config: (Config) - Configuration object containing parameters.
     :param filename: (str) - Name of the data file.
 
-    :return: (list, numpy.ndarray) - List containing distance and motion data, and ndarray containing labels.
+    :return: (list, np.ndarray) - List containing distance and motion data, and ndarray containing labels.
     """
     data = pickle.load(open(config.data_directory + filename, "rb"))
     Labels = []
@@ -152,7 +154,7 @@ def prepare_data(config, filename: str) -> (list, np.ndarray):
     return [Distances, Motion], Labels
 
 
-def plot_history(history) -> None:
+def plot_history(history: History) -> None:
     """
     Plot training & validation metrics.
 
@@ -169,12 +171,12 @@ def plot_history(history) -> None:
     plt.show()
 
 
-def plot_confusion_matrix(predictions, labels) -> None:
+def plot_confusion_matrix(predictions: np.ndarray, labels: np.ndarray) -> None:
     """
     Plot the confusion matrix based on predicted and true labels.
 
-    :param predictions: (ndarray) - Predicted labels.
-    :param labels: (ndarray) - True labels.
+    :param predictions: (np.ndarray) - Predicted labels.
+    :param labels: (np.ndarray) - True labels.
     """
     matrix = confusion_matrix(np.argmax(labels, axis=1), np.argmax(predictions, axis=1))
     plt.figure(figsize=(10, 10))

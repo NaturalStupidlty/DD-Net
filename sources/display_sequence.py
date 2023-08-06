@@ -9,7 +9,7 @@ def load_skeletons_image(path: str) -> np.ndarray:
     Load skeletons image from a text file.
 
     :param path: (str) - The path to the skeletons image text file.
-    :return: (numpy.ndarray) - A numpy array containing the loaded skeletons image.
+    :return: (np.ndarray) - A numpy array containing the loaded skeletons image.
     """
     return np.loadtxt(path)
 
@@ -18,9 +18,9 @@ def extract_joint_points(skeletons_image: np.ndarray, bones: np.ndarray) -> np.n
     """
     Extract joint points from skeletons image and create display data.
 
-    :param skeletons_image: (numpy.ndarray) - Input skeletons image data.
-    :param bones: (numpy.ndarray) - An array representing the bone connections.
-    :return: (numpy.ndarray) - A numpy array containing extracted joint points for display.
+    :param skeletons_image: (np.ndarray) - Input skeletons image data.
+    :param bones: (np.ndarray) - An array representing the bone connections.
+    :return: (np.ndarray) - A numpy array containing extracted joint points for display.
     """
     num_images = skeletons_image.shape[0]
     num_joints = bones.shape[0]
