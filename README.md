@@ -1,2 +1,3 @@
 # DD-Net
-My DD-Net implementation
+
+https://arxiv.org/pdf/1907.09658.pdf
