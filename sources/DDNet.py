@@ -63,7 +63,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def convolution1D(x, filters, kernel) -> Tensor:
+    def convolution1D(x: Tensor, filters: int, kernel: int) -> Tensor:
         """
         Apply a 1D convolutional layer with batch normalization and LeakyReLU activation.
 
@@ -78,7 +78,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def convolutions_block(x, filters) -> Tensor:
+    def convolutions_block(x: Tensor, filters: int) -> Tensor:
         """
         Apply a block of two consecutive 1D convolutional layers with batch normalization and LeakyReLU activation.
 
@@ -91,7 +91,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_model_block(x, filters, max_pooling: bool) -> Tensor:
+    def build_model_block(x: Tensor, filters: int, max_pooling: bool) -> Tensor:
         """
         Build a model block consisting of multiple layers including convolutions and optional max pooling.
         In DD-Net we do not use max pooling to build fast motion block.
@@ -114,7 +114,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_jcd_block(x, filters) -> Tensor:
+    def build_jcd_block(x: Tensor, filters: int) -> Tensor:
         """
         Build a block specific for Joint Collection Distances (JCD) processing.
 
@@ -126,7 +126,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_slow_motion_block(x, filters) -> Tensor:
+    def build_slow_motion_block(x: Tensor, filters: int) -> Tensor:
         """
         Build a block for processing slow motion data.
 
@@ -138,7 +138,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_fast_motion_block(x, filters) -> Tensor:
+    def build_fast_motion_block(x: Tensor, filters: int) -> Tensor:
         """
         Build a block for processing fast motion data.
 
@@ -150,7 +150,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_main_block(x, filters) -> Tensor:
+    def build_main_block(x: Tensor, filters: int) -> Tensor:
         """
         Build the main block of the model, consisting of multiple convolutional layers with max pooling.
 
@@ -171,7 +171,7 @@ class DDNet:
         return x
 
     @staticmethod
-    def build_output_block(x, classes_number) -> Tensor:
+    def build_output_block(x: Tensor, classes_number: int) -> Tensor:
         """
         Build the output block of the model.
 
@@ -285,3 +285,17 @@ class DDNet:
         :param save_path: (str) - Path to save the model weights.
         """
         self.model.save_weights(save_path)
+
+    def load(self, load_path: str):
+        """
+        Load the model weights from the specified path. It also checks if the model is an .h5 file that exists.
+
+        :param load_path: (str) - Path to load the model weights.
+        """
+        if not os.path.isfile(load_path):
+            raise FileNotFoundError(f"Model file not found: {load_path}")
+        if not load_path.endswith(".h5"):
+            raise ValueError(f"Invalid file type: {load_path}. Expected .h5 file.")
+
+        self.model.load_weights(load_path)
+
