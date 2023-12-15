@@ -1,9 +1,9 @@
 # DDNet
-### *A Double-feature Double-motion Network*
+### *A Double-feature 🚀 Double-motion 🚀 Network*
 
 This is an unofficial Tensorflow implementation of the [DDNet – Double-feature Double-motion Network](https://arxiv.org/pdf/1907.09658.pdf)
 
-The authors of this repository believe, that this implementation is more readable and easier to understand than the original one.
+The authors of this repository believe, that this implementation is more readable and easier to understand than [the original one.](https://github.com/fandulu/DD-Net)
 
 ****
 ## Architecture
